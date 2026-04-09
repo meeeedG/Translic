@@ -9,9 +9,6 @@ Diagramme de classes du projet :
 
 ![Diagramme UML Translic](diag.png)
 
-Source PlantUML utilisée :
-
-- `uml-class-diagram.puml`
 
 ## Aperçu
 
