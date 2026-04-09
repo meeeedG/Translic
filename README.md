@@ -2,6 +2,17 @@
 
 Application backend Spring Boot pour la gestion de transports publics, avec une vue frontend simple pour tester les fonctionnalités.
 
+
+## Diagramme UML
+
+Diagramme de classes du projet :
+
+![Diagramme UML Translic](diag.png)
+
+Source PlantUML utilisée :
+
+- `uml-class-diagram.puml`
+
 ## Aperçu
 
 Le projet expose une API REST autour de 4 entités principales :
@@ -114,16 +125,6 @@ Elle permet :
 - `GET /api/passages/{id}`
 - `PUT /api/passages/{id}`
 - `DELETE /api/passages/{id}`
-
-## Diagramme UML
-
-Diagramme de classes du projet :
-
-![Diagramme UML Translic](diag.png)
-
-Source PlantUML utilisée :
-
-- `uml-class-diagram.puml`
 
 ## Tests
 
