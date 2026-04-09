@@ -1,6 +1,7 @@
 package com.translic.translic.controllers;
 
 import com.translic.translic.dto.HoraireRequest;
+import com.translic.translic.dto.HoraireWithPassagesRequest;
 import com.translic.translic.entities.Horaire;
 import com.translic.translic.services.HoraireService;
 import jakarta.validation.Valid;
@@ -21,6 +22,12 @@ public class HoraireController {
     @ResponseStatus(HttpStatus.CREATED)
     public Horaire create(@Valid @RequestBody HoraireRequest request) {
         return horaireService.create(request);
+    }
+
+    @PostMapping("/with-passages")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Horaire createWithPassages(@Valid @RequestBody HoraireWithPassagesRequest request) {
+        return horaireService.createWithPassages(request);
     }
 
     @GetMapping

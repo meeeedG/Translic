@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Translic - User Test View</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    body {
+      margin: 0;
+      padding: 1rem;
+      max-width: 1100px;
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    .muted {
+      opacity: 0.8;
+      font-size: 0.92rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .card {
+      border: 1px solid #666;
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+    }
+    input, select, textarea, button {
+      font: inherit;
+      padding: 0.45rem 0.55rem;
+      box-sizing: border-box;
+      border-radius: 6px;
+    }
+    input, select, textarea {
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+    }
+    ul {
+      margin: 0;
+      padding-left: 1rem;
+    }
+    li {
+      margin-bottom: 0.35rem;
+    }
+    .pill {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      border: 1px solid #666;
+      font-size: 0.8rem;
+    }
+    .ok {
+      border-color: #118a11;
+      color: #118a11;
+    }
+    .bad {
+      border-color: #b30000;
+      color: #b30000;
+    }
+    .mono {
+      font-family: Consolas, Menlo, Monaco, monospace;
+      font-size: 0.9rem;
+    }
+    pre {
+      border: 1px solid #666;
+      border-radius: 8px;
+      padding: 0.75rem;
+      min-height: 170px;
+      overflow: auto;
+      margin: 0;
+    }
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      font-family: Consolas, Menlo, Monaco, monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>Translic - User View</h1>
+  <p class="muted">This screen mimics what a rider would do: choose a line, see stations, check departure times.</p>
+
+  <section class="card">
+    <h2>1) Choose a line</h2>
+    <div class="row">
+      <button id="refreshLignesBtn">Refresh lines</button>
+      <select id="ligneSelect"></select>
+      <button id="openLineBtn">Open line</button>
+    </div>
+    <div id="lineSummary" class="muted">No line selected yet.</div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h3>2) Stations on this line</h3>
+      <ul id="stationsList">
+        <li class="muted">Pick a line to view stations.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h3>3) Departure schedule</h3>
+      <ul id="horairesList">
+        <li class="muted">Pick a line to view schedules.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Quick system checks</h2>
+    <div class="row">
+      <button id="checkBtn">Run checks</button>
+      <span class="muted">Verifies main backend endpoints</span>
+    </div>
+    <div id="checklist"></div>
+  </section>
+
+  <details class="card">
+    <summary><strong>Advanced testing (API/dev mode)</strong></summary>
+    <p class="muted">Keep this for debugging and manual API requests.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h3>Quick GET</h3>
+        <div class="row"><button data-path="/api/lignes">GET /api/lignes</button></div>
+        <div class="row"><button data-path="/api/stations">GET /api/stations</button></div>
+        <div class="row"><button data-path="/api/horaires">GET /api/horaires</button></div>
+        <div class="row"><button data-path="/api/passages">GET /api/passages</button></div>
+      </section>
+
+      <section class="card">
+        <h3>Examples</h3>
+        <div class="row"><button data-example="ligne">POST ligne</button></div>
+        <div class="row"><button data-example="station">POST station</button></div>
+        <div class="row"><button data-example="horaire">POST horaire</button></div>
+        <div class="row"><button data-example="passage">POST passage</button></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h3>Seed demo data</h3>
+      <div class="row">
+        <button id="seedAllBtn">Seed all (line + station + schedule + passage)</button>
+        <span id="seedState" class="mono muted">Idle</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Custom request</h3>
+      <div class="row">
+        <select id="method">
+          <option>GET</option>
+          <option>POST</option>
+          <option>PUT</option>
+          <option>DELETE</option>
+        </select>
+        <input id="path" value="/api/lignes">
+      </div>
+      <div class="row">
+        <textarea id="body" spellcheck="false">{}</textarea>
+      </div>
+      <div class="row">
+        <button id="sendBtn">Send request</button>
+        <button id="clearBtn" type="button">Clear output</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Response</h3>
+      <pre id="output">Ready.</pre>
+    </section>
+  </details>
+
+  <script>
+    const ligneSelectEl = document.getElementById("ligneSelect");
+    const lineSummaryEl = document.getElementById("lineSummary");
+    const stationsListEl = document.getElementById("stationsList");
+    const horairesListEl = document.getElementById("horairesList");
+    const refreshLignesBtn = document.getElementById("refreshLignesBtn");
+    const openLineBtn = document.getElementById("openLineBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    const checklistEl = document.getElementById("checklist");
+
+    const methodEl = document.getElementById("method");
+    const pathEl = document.getElementById("path");
+    const bodyEl = document.getElementById("body");
+    const outputEl = document.getElementById("output");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const seedAllBtn = document.getElementById("seedAllBtn");
+    const seedStateEl = document.getElementById("seedState");
+
+    const examples = {
+      ligne: { method: "POST", path: "/api/lignes", body: { nom: "Ligne 1", type: "Bus" } },
+      station: { method: "POST", path: "/api/stations", body: { nom: "Gare Centrale", adresse: "1 Place Centrale", ligneId: 1 } },
+      horaire: { method: "POST", path: "/api/horaires", body: { ligneId: 1, heureDepart: "08:00:00", heureArrivee: "08:45:00" } },
+      passage: { method: "POST", path: "/api/passages", body: { horaireId: 1, stationId: 1, ordre: 1, heurePassage: "08:10:00" } }
+    };
+
+    function setOutput(data, isError = false) {
+      outputEl.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+      outputEl.style.borderColor = isError ? "#b30000" : "#666";
+    }
+
+    function setSeedState(text, isError = false) {
+      seedStateEl.textContent = text;
+      seedStateEl.className = isError ? "mono bad" : "mono muted";
+    }
+
+    function toNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    async function requestJson(path, method = "GET", body = undefined) {
+      const headers = {};
+      const options = { method, headers };
+      if (body !== undefined) {
+        options.body = JSON.stringify(body);
+        headers["Content-Type"] = "application/json";
+      }
+      const res = await fetch(path, options);
+      const text = await res.text();
+      let payload = text;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch (ignore) {
+        // Keep raw text if payload is not JSON.
+      }
+      return { status: res.status, ok: res.ok, method, path, response: payload };
+    }
+
+    function normalizeArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function renderStations(stations) {
+      if (!stations.length) {
+        stationsListEl.innerHTML = '<li class="muted">No stations on this line yet.</li>';
+        return;
+      }
+      stationsListEl.innerHTML = stations.map((station) =>
+        "<li><strong>" + (station.nom || "Unnamed station") + "</strong><br><span class='muted'>" +
+        (station.adresse || "No address") + "</span></li>"
+      ).join("");
+    }
+
+    function renderHoraires(horaires) {
+      if (!horaires.length) {
+        horairesListEl.innerHTML = '<li class="muted">No schedules on this line yet.</li>';
+        return;
+      }
+      horairesListEl.innerHTML = horaires.map((horaire) => {
+        const depart = horaire.heureDepart || "--:--:--";
+        const arrivee = horaire.heureArrivee || "--:--:--";
+        const stopCount = normalizeArray(horaire.passages).length;
+        return "<li><strong>" + depart + " -> " + arrivee + "</strong><br><span class='muted'>" +
+          stopCount + " recorded passages</span></li>";
+      }).join("");
+    }
+
+    async function refreshLines() {
+      try {
+        const result = await requestJson("/api/lignes");
+        if (!result.ok || !Array.isArray(result.response)) {
+          throw new Error("Could not load lines");
+        }
+        const lignes = result.response;
+        if (!lignes.length) {
+          ligneSelectEl.innerHTML = "<option value=''>No lines available</option>";
+          lineSummaryEl.textContent = "No line found. Use Seed demo data in Advanced mode.";
+          renderStations([]);
+          renderHoraires([]);
+          return;
+        }
+        ligneSelectEl.innerHTML = lignes.map((ligne) =>
+          "<option value='" + ligne.id + "'>" + ligne.nom + " (" + ligne.type + ")</option>"
+        ).join("");
+        lineSummaryEl.textContent = "Loaded " + lignes.length + " line(s).";
+      } catch (err) {
+        lineSummaryEl.textContent = "Failed to load lines: " + err.message;
+      }
+    }
+
+    async function openSelectedLine() {
+      const id = toNumber(ligneSelectEl.value);
+      if (!id) {
+        lineSummaryEl.textContent = "Please select a valid line.";
+        return;
+      }
+      try {
+        const result = await requestJson("/api/lignes/" + id);
+        if (!result.ok || !result.response) {
+          throw new Error("Line not found");
+        }
+        const line = result.response;
+        const stations = normalizeArray(line.stations);
+        const horaires = normalizeArray(line.horaires);
+
+        lineSummaryEl.innerHTML = "Viewing <strong>" + (line.nom || "Unnamed line") + "</strong> (" +
+          (line.type || "unknown type") + ") - " + stations.length + " stations, " + horaires.length + " schedules";
+        renderStations(stations);
+        renderHoraires(horaires);
+      } catch (err) {
+        lineSummaryEl.textContent = "Failed to open line: " + err.message;
+      }
+    }
+
+    async function runChecks() {
+      const endpoints = ["/api/lignes", "/api/stations", "/api/horaires", "/api/passages"];
+      checklistEl.innerHTML = "";
+      for (const endpoint of endpoints) {
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML = "<span class='mono'>" + endpoint + "</span><span class='pill'>checking</span>";
+        checklistEl.appendChild(row);
+        const badge = row.querySelector(".pill");
+        try {
+          const res = await fetch(endpoint);
+          badge.textContent = res.ok ? ("OK " + res.status) : ("ERR " + res.status);
+          badge.className = res.ok ? "pill ok" : "pill bad";
+        } catch (err) {
+          badge.textContent = "FAIL";
+          badge.className = "pill bad";
+        }
+      }
+    }
+
+    async function seedAll() {
+      setSeedState("Running seed...");
+      try {
+        const stamp = Date.now().toString().slice(-5);
+        const ligne = await requestJson("/api/lignes", "POST", { nom: "Ligne " + stamp, type: "Bus" });
+        if (!ligne.ok || !ligne.response || !ligne.response.id) throw new Error("Ligne creation failed");
+
+        const ligneId = ligne.response.id;
+        const station = await requestJson("/api/stations", "POST", {
+          nom: "Station " + stamp,
+          adresse: "Address " + stamp,
+          ligneId: ligneId
+        });
+        if (!station.ok || !station.response || !station.response.id) throw new Error("Station creation failed");
+
+        const horaire = await requestJson("/api/horaires", "POST", {
+          ligneId: ligneId,
+          heureDepart: "08:00:00",
+          heureArrivee: "08:45:00"
+        });
+        if (!horaire.ok || !horaire.response || !horaire.response.id) throw new Error("Horaire creation failed");
+
+        const horaireId = horaire.response.id;
+        const stationId = station.response.id;
+        const passage = await requestJson("/api/passages", "POST", {
+          horaireId: horaireId,
+          stationId: stationId,
+          ordre: 1,
+          heurePassage: "08:10:00"
+        });
+        if (!passage.ok) throw new Error("Passage creation failed");
+
+        setSeedState("Seed completed successfully");
+        await refreshLines();
+      } catch (err) {
+        setSeedState(err.message, true);
+      }
+    }
+
+    async function sendRequest() {
+      const method = methodEl.value;
+      const path = pathEl.value.trim();
+      if (!path.startsWith("/")) {
+        setOutput("Path should start with '/'. Example: /api/lignes", true);
+        return;
+      }
+      let body;
+      if (method !== "GET" && method !== "DELETE") {
+        try {
+          body = JSON.parse(bodyEl.value || "{}");
+        } catch (err) {
+          setOutput("Invalid JSON body: " + err.message, true);
+          return;
+        }
+      }
+      setOutput("Loading...");
+      try {
+        const result = await requestJson(path, method, body);
+        setOutput(result, !result.ok);
+      } catch (err) {
+        setOutput("Request failed: " + err.message, true);
+      }
+    }
+
+    refreshLignesBtn.addEventListener("click", () => refreshLines());
+    openLineBtn.addEventListener("click", () => openSelectedLine());
+    checkBtn.addEventListener("click", () => runChecks().catch((err) => setOutput(err.message, true)));
+
+    document.querySelectorAll("[data-path]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        methodEl.value = "GET";
+        pathEl.value = btn.getAttribute("data-path");
+        bodyEl.value = "{}";
+        sendRequest();
+      });
+    });
+
+    document.querySelectorAll("[data-example]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-example");
+        const ex = examples[key];
+        if (!ex) return;
+        methodEl.value = ex.method;
+        pathEl.value = ex.path;
+        bodyEl.value = JSON.stringify(ex.body, null, 2);
+      });
+    });
+
+    seedAllBtn.addEventListener("click", () => seedAll().catch((err) => setOutput(err.message, true)));
+    sendBtn.addEventListener("click", sendRequest);
+    clearBtn.addEventListener("click", () => setOutput("Ready."));
+
+    refreshLines().then(() => openSelectedLine()).catch(() => {});
+    runChecks().catch(() => {});
+  </script>
+</body>
+</html>
